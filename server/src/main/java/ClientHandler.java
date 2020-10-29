@@ -62,7 +62,7 @@ public class ClientHandler {
                                     sendMsg("/authok " + newNick);
                                     server.subscribe(this);
                                     break;
-                                }else{
+                                } else {
                                     sendMsg("С этим логином уже вошли в чат");
                                 }
                             } else {
@@ -74,11 +74,30 @@ public class ClientHandler {
                     //цикл работы
                     while (true) {
                         String str = in.readUTF();
-                        if (str.equals("/end")) {
-                            sendMsg("/end");
-                            break;
+                        if (str.startsWith("/")) {
+                            if (str.equals("/end")) {
+                                sendMsg("/end");
+                                break;
+                            }
+                            // Ответ на запрос об изменение ника
+                            if (str.startsWith("/chg ")) {
+                                String[] token = str.split("\\s");
+                                System.out.println("Запрос изменения: "+login+" на "+token[1]);
+                                if (token.length < 2) {
+                                    continue;
+                                }
+                                if (server.getAuthService().changeNickname(login, token[1])) {
+                                    sendMsg("Ник успешно изменен, войдите повторно");
+                                    sendMsg("/end ");
+
+                                    break;
+                                } else {
+                                    sendMsg("Такой ник занят");
+                                }
+                            }
+                        } else {
+                            server.broadcastMsg(this, str);
                         }
-                        server.broadcastMsg(this, str);
                     }
                 } catch (SocketTimeoutException e) {
                     System.out.println("Отключение клиента по времени бездействия, сокет: " + socket.getRemoteSocketAddress());
@@ -116,6 +135,7 @@ public class ClientHandler {
     public String getNickname() {
         return nickname;
     }
+
     public String getLogin() {
         return login;
     }
