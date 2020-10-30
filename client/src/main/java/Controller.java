@@ -14,12 +14,14 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.EOFException;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Date;
+import java.util.List;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -120,25 +122,55 @@ public class Controller implements Initializable {
                             textArea.appendText(str + "\n");
                         }
                     }
-                    //цикл работы
-                    while (true) {
-                        String str = in.readUTF(); // !..! Ожидание пакета от сервера
-                        if (str.startsWith("/")) { // Проверка пришло ли служебное сообщение
-                            if (str.equals("/end")) {
-                                break;
+                    // Открытие файла после авторизации (чтение истории и запись)
+                    // Чтение истории из файла (использование nio из-за readAllLines)
+                    Path path = Paths.get("history_" + nickname + ".txt");
+                    if (Files.exists(path)) {
+                        // Файл с историей есть
+                        try {
+                            List content = Files.readAllLines(path);
+                            int startElement = 0;
+                            if (content.toArray().length > 100) {
+                                startElement = content.toArray().length - 100;
                             }
-                            if (str.startsWith("/clientlist ")) {
-                                String[] token = str.split("\\s");
-                                Platform.runLater(() -> {
-                                    clientList.getItems().clear();
-                                    for (int i = 1; i < token.length; i++) {
-                                        clientList.getItems().add(token[i]);
-                                    }
-                                });
+                            for (int i = startElement; i < content.toArray().length; i++) {
+                                System.out.println(content.toArray()[i]);
+                                textArea.appendText((String) content.toArray()[i]+"\n");
                             }
-                        } else {
-                            textArea.appendText(str + "\n");
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
                         }
+                    }
+                    // Запись в файл информации о входе (использование io)
+                    File file = new File("history_" + nickname + ".txt");
+                    try (FileOutputStream fileOutputStream = new FileOutputStream(file,true)) {
+                        String techMes = String.format("Подключение к чату в %1$tT %1$te %1$tB %1$tY \n", new Date());
+                        fileOutputStream.write(techMes.getBytes());
+                        //цикл работы
+                        while (true) {
+                            String str = in.readUTF(); // !..! Ожидание пакета от сервера
+                            if (str.startsWith("/")) { // Проверка пришло ли служебное сообщение
+                                if (str.equals("/end")) {
+                                    break;
+                                }
+                                if (str.startsWith("/clientlist ")) {
+                                    String[] token = str.split("\\s");
+                                    Platform.runLater(() -> {
+                                        clientList.getItems().clear();
+                                        for (int i = 1; i < token.length; i++) {
+                                            clientList.getItems().add(token[i]);
+                                        }
+                                    });
+                                }
+                            } else {
+                                textArea.appendText(str + "\n");
+                                fileOutputStream.write((str + "\n").getBytes());
+                            }
+                        }
+                        // От сервера пришел "/end"
+                        techMes = String.format("Отключение от чата в %1$tT %1$te %1$tB %1$tY \n", new Date());
+                        fileOutputStream.write(techMes.getBytes());
+                        fileOutputStream.close();
                     }
                 } catch (EOFException e) {
                     textArea.appendText("Соединение с сервером прервано");
