@@ -13,11 +13,12 @@ import java.net.Socket;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Scanner;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.*;
 
 public class Server {
     private List<ClientHandler> clients; // Список подключений
     private AuthService authService; //Объект для обработки аудентификации
+    ExecutorService service = Executors.newCachedThreadPool();
 
     public Server() {
         clients = new CopyOnWriteArrayList<>();
@@ -25,7 +26,6 @@ public class Server {
         ServerSocket server = null;
         Socket socket = null;
         final int PORT = 8189;
-
         try {
             server = new ServerSocket(PORT);
             System.out.println("Сервер запустился");
@@ -33,6 +33,8 @@ public class Server {
             while (true) { // Бесконечный цикл в котором создается ClientHandler для нового подключения
                 socket = server.accept(); // !...! Точка ожидания нового подключения
                 new ClientHandler(this, socket); // Выполняется при появление нового подключения
+                System.out.println("Кол-во активных потоков: " + ((ThreadPoolExecutor) service).getPoolSize());
+                System.out.println("Кол-во завершенных потоков: " + ((ThreadPoolExecutor) service).getCompletedTaskCount());
             }
 
         } catch (IOException e) {
@@ -48,6 +50,7 @@ public class Server {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            service.shutdown();
         }
     }
 
