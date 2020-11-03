@@ -25,8 +25,8 @@ public class ClientHandler {
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
             System.out.println("Подключился клиент, сокет: " + socket.getRemoteSocketAddress());
-
-            new Thread(() -> {
+            server.service.execute(()->{
+            //new Thread(() -> {
                 try {
                     socket.setSoTimeout(5000); // Таймаут на отключение клиента, если клиент не зарегистрирован
                     //цикл аутентификации
@@ -117,7 +117,8 @@ public class ClientHandler {
                         e.printStackTrace();
                     }
                 }
-            }).start();
+            //}).start();
+            });
 
         } catch (IOException e) {
             e.printStackTrace();
